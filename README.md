@@ -5,7 +5,7 @@ A cross-platform game template for Swift using the CNA (Common Native Abstractio
 ## Features
 
 - **XNA 4.0 API**: Familiar PascalCase API for Game lifecycle.
-- **Multi-platform**: Supports macOS, iOS, tvOS, and visionOS.
+- **Multi-platform**: Supports macOS, iOS, tvOS, visionOS, Linux, Windows, and Web (Wasm).
 - **Adaptive Rendering**: Automatically switches between 3D (HiDef) and 2D (Reach) modes.
 - **Smoke Test Support**: Includes `--smoke-test` flag for CI/CD validation.
 
