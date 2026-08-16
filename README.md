@@ -1,6 +1,6 @@
 # CNA Swift Template
 
-> **Status: In progress - ZATÍM NEFUNKČNÍ**
+> **Status: In progress - NOT YET FUNCTIONAL**
 
 
 A cross-platform game template for Swift using the CNA (Common Native Abstraction) framework.
