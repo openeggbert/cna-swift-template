@@ -1,5 +1,8 @@
 # CNA Swift Template
 
+> **Status: In progress - ZATÍM NEFUNKČNÍ**
+
+
 A cross-platform game template for Swift using the CNA (Common Native Abstraction) framework.
 
 ## Features
