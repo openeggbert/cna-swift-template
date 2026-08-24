@@ -3,9 +3,6 @@ import PackageDescription
 
 let package = Package(
     name: "CNA.Swift.Template",
-    platforms: [
-        .macOS(.v10_15), .iOS(.v13), .tvOS(.v13), .visionOS(.v1)
-    ],
     dependencies: [
         .package(path: "../cna-swift"),
     ],
