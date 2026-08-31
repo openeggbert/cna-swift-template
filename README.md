@@ -7,15 +7,22 @@ It opens the project-owned `Content/logo.png` through the mapped
 submits a rotating/scaling/moving sprite through SpriteBatch, polls native
 keyboard state, and requests native Game exit at an exact Draw callback count.
 
+It also creates one `RenderTarget2D`, holds it as the `Texture2D` it derives
+from, binds it and restores the backbuffer -- a public-API demonstration that
+the inheritance is real. No pixel is claimed: the qualified renderer has no
+window.
+
 There is no Content/XNB, BasicEffect, cube, capability guess, fake banner,
 synthetic texture, or Swift-owned frame loop.
 
 ## Qualified boundary
 
-Foundation Milestone 1 qualifies Linux x86-64 with Swift 6.0.3 and an external
-exact CNA C ABI 0.7.0 HEADLESS/NULL library. HEADLESS executes the real graphics
-route but provides no visible window, so visible output remains backend-blocked.
-macOS, iOS, tvOS, visionOS, Windows, and Web/Wasm are unqualified.
+Linux x86-64 with Swift 6.0.3 and an external CNA C ABI 0.21.0 HEADLESS library
+is the qualified boundary. The binding admits CNA's own published consumer
+window — major `0` exactly, minor `21` or later — so an earlier generation is
+rejected by name. HEADLESS executes the real graphics route but provides no
+visible window, so visible output remains backend-blocked. macOS, iOS, tvOS,
+visionOS, Windows, and Web/Wasm are unqualified.
 
 From this repository root, provide the external library explicitly:
 

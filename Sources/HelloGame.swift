@@ -6,11 +6,14 @@ import Foundation
 enum HelloGameError: Error, CustomStringConvertible {
     case missingLogo(String)
     case invalidFrameLimit(String)
+    case noGraphicsDevice
 
     var description: String {
         switch self {
         case .missingLogo(let path): return "could not open the project-owned PNG at \(path)"
         case .invalidFrameLimit(let value): return "--frames requires a positive integer, got \(value)"
+        case .noGraphicsDevice:
+            return "the registered graphics device service produced no device"
         }
     }
 }
@@ -27,6 +30,15 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
     private(set) var UpdateCallbacks = 0
     private(set) var DrawCallbacks = 0
     private(set) var NativeViewport: Microsoft.Xna.Framework.Graphics.Viewport?
+    private(set) var OffscreenTarget: String = "none"
+
+    /// `Game.GraphicsDevice` resolves the graphics device SERVICE out of
+    /// `Game.Services` and returns its Optional device, which is what XNA's
+    /// own getter does. `GraphicsDeviceManager` is the registered producer.
+    private func requireDevice() throws -> Microsoft.Xna.Framework.Graphics.GraphicsDevice {
+        guard let device = try GraphicsDevice else { throw HelloGameError.noGraphicsDevice }
+        return device
+    }
 
     init(frames: Int) throws {
         requestedFrames = frames
@@ -35,7 +47,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
     }
 
     override func Initialize() throws {
-        let viewport = try GraphicsDevice.Viewport
+        let viewport = try requireDevice().Viewport
         NativeViewport = viewport
         position = Microsoft.Xna.Framework.Vector2(
             Float(viewport.Width) * 0.5,
@@ -46,9 +58,21 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
     override func LoadContent() throws {
         let path = FileManager.default.currentDirectoryPath + "/Content/logo.png"
         guard let stream = InputStream(fileAtPath: path) else { throw HelloGameError.missingLogo(path) }
-        let device = try GraphicsDevice
+        let device = try requireDevice()
         logo = try Microsoft.Xna.Framework.Graphics.Texture2D.FromStream(device, stream: stream)
         spriteBatch = try Microsoft.Xna.Framework.Graphics.SpriteBatch(graphicsDevice: device)
+
+        // One small demonstration that a RenderTarget2D IS a Texture2D: the
+        // target is created, held as its base type, bound, the backbuffer is
+        // restored, and it is released. Public API only, and no pixel is
+        // claimed -- the qualified renderer has no window.
+        let target = try Microsoft.Xna.Framework.Graphics.RenderTarget2D(
+            graphicsDevice: device, width: 64, height: 64)
+        let asTexture: Microsoft.Xna.Framework.Graphics.Texture2D = target
+        try device.SetRenderTarget(target)
+        try device.SetRenderTarget(nil)
+        OffscreenTarget = "\(asTexture.Width)x\(asTexture.Height)"
+        try target.Dispose()
     }
 
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {
@@ -63,7 +87,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         }
 
         position = position + velocity * elapsed
-        let viewport = try GraphicsDevice.Viewport
+        let viewport = try requireDevice().Viewport
         let halfWidth = Float(logo?.Width ?? 0) * 0.5
         let halfHeight = Float(logo?.Height ?? 0) * 0.5
         let maximumX = Float(viewport.Width) - halfWidth
@@ -80,7 +104,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
 
     override func Draw(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {
         guard let spriteBatch, let logo else { return }
-        try GraphicsDevice.Clear(.CornflowerBlue)
+        try requireDevice().Clear(.CornflowerBlue)
         let rotation = animationSeconds * 0.8
         let scale = 0.85 + 0.15 * sin(animationSeconds * 2)
         let origin = Microsoft.Xna.Framework.Vector2(Float(logo.Width) * 0.5, Float(logo.Height) * 0.5)
@@ -105,6 +129,6 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         let dimensions = "\(logo?.Width ?? 0)x\(logo?.Height ?? 0)"
         return "CNA_SWIFT_CANARY requested=\(requestedFrames) updates=\(UpdateCallbacks) " +
             "draws=\(DrawCallbacks) viewport=\(NativeViewport?.Width ?? 0)x\(NativeViewport?.Height ?? 0) " +
-            "texture=\(dimensions)"
+            "texture=\(dimensions) offscreen=\(OffscreenTarget)"
     }
 }
