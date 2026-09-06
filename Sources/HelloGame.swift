@@ -38,6 +38,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
     private(set) var QueryLine: String = "none"
     private(set) var AudioLine: String = "none"
     private(set) var SongLine: String = "none"
+    private(set) var TouchLine: String = "none"
 
     /// `Game.GraphicsDevice` resolves the graphics device SERVICE out of
     /// `Game.Services` and returns its Optional device, which is what XNA's
@@ -86,6 +87,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         try readOcclusionQuery(device)
         try readAudio()
         try readSong()
+        try readTouch()
     }
 
     /// The surface Foundation 77 through 85 added, exercised from outside the
@@ -402,6 +404,28 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
             + "gameHasControl=\(player.GameHasControl)"
     }
 
+    /// `TouchPanel`, which has no touch device here -- and answers anyway.
+    ///
+    /// It is also the one place a consumer meets this binding's only settable
+    /// properties: `DisplayWidth` and `DisplayHeight` have setters that cannot
+    /// refuse, so they stay properties where every other fallible setter
+    /// became a `Set…` method.
+    private func readTouch() throws {
+        typealias T = Microsoft.Xna.Framework.Input.Touch.TouchPanel
+        let capabilities = try T.GetCapabilities()
+        let touches = try T.GetState().Count
+
+        T.DisplayWidth = 800
+        T.DisplayHeight = 480
+        try T.SetEnabledGestures(
+            Microsoft.Xna.Framework.Input.Touch.GestureType.Tap)
+
+        TouchLine = "connected=\(capabilities.IsConnected) "
+            + "maxTouches=\(capabilities.MaximumTouchCount) touches=\(touches) "
+            + "display=\(T.DisplayWidth)x\(T.DisplayHeight) "
+            + "gestures=\(T.EnabledGestures.rawValue)"
+    }
+
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {
         UpdateCallbacks += 1
         let duration = gameTime.ElapsedGameTime.components
@@ -459,6 +483,6 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
             "texture=\(dimensions) offscreen=\(OffscreenTarget) " +
             "adapters=\(AdapterLine) window=\(WindowLine) device=\(DisposalLine) "
             + "content=\(ContentLine) query=\(QueryLine) audio=\(AudioLine) "
-            + "song=\(SongLine)"
+            + "song=\(SongLine) touch=\(TouchLine)"
     }
 }

@@ -80,6 +80,12 @@ built from a file has **no library context**: CNA reports that as an ordinary
 answer, the binding turns it into a refusal because the return is proven
 non-null, and `noContextReported=true` is that refusal arriving.
 
+Last it reads the `TouchPanel`, which has no touch device on this host and
+answers anyway -- `connected=false maxTouches=0`. It is also the one place a
+consumer meets this binding's **only settable properties**: `DisplayWidth` and
+`DisplayHeight` have setters that cannot refuse, so they stay properties where
+every other fallible setter became a `Set…` method.
+
 Two of the values it prints are worth reading twice. The window reports a client
 area of **0x0** while the device reports a **800x480** viewport: that is what
 headless means here, and a canary that quietly used the window's size instead of
@@ -105,6 +111,7 @@ song=name=canary track track=0 missingRefused=true readAfterDisposeRefused=true
 noContextReported=true librarySongs=0 libraryArtists=0 libraryPlaylists=0
 libraryPictures=47 ownSourceNil=true mediaSources=1 queued=1
 playerState=Playing gameHasControl=true
+touch=connected=false maxTouches=0 touches=0 display=800x480 gestures=1
 ```
 
 `waited=0` says the query completed before the first check, and `pixels=1` is
