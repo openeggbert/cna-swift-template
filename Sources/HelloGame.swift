@@ -276,7 +276,23 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
 
         try instance.Dispose()
         try effect.Dispose()
+        // A streaming instance, which is built from parameters rather than a
+        // buffer, and the one limit this runtime does not enforce: XNA refuses
+        // past 64 pending buffers, and here they simply accumulate.
+        let dynamic = try Microsoft.Xna.Framework.Audio
+            .DynamicSoundEffectInstance(sampleRate: 8000, channels: .Mono)
+        let frame = [UInt8](repeating: 0, count: 64)
+        var queued = 0
+        var limitRefused = false
+        for _ in 0..<80 {
+            do { try dynamic.SubmitBuffer(frame); queued += 1 }
+            catch { limitRefused = true; break }
+        }
+        let pending = try dynamic.PendingBufferCount
+        try dynamic.Dispose()
+
         AudioLine = "played=\(played) ms=\(ms) state=\(state) "
+            + "queued=\(queued) pending=\(pending) limitRefused=\(limitRefused) "
             + "loopRefused=\(loopRefused) badBufferRefused=\(badBufferRefused) "
             + "master=\(Microsoft.Xna.Framework.Audio.SoundEffect.MasterVolume)"
     }
