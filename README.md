@@ -68,9 +68,14 @@ is that every collection answers. `ownSourceNil=true` is not a failure --
 CNA publishes a library's source only as a name, and a name is not a
 `MediaSource`, so nil is the honest answer.
 
+Finally it plays the song it wrote through `MediaPlayer`, reads the queue back
+and stops. **The queue is process-wide** -- CNA's own wording -- so it outlives
+the game that filled it; `queued=1` is the canary's own track and nothing else.
+
 **The canary reads; it never writes.** `MediaLibrary.SavePicture` works, and it
 is deliberately not called: it would leave a file in the user's own photo
-album, and CNA publishes no route to remove one. And a song
+album, and CNA publishes no route to remove one. The song it plays is a file it
+wrote itself and deletes. And a song
 built from a file has **no library context**: CNA reports that as an ordinary
 answer, the binding turns it into a refusal because the return is proven
 non-null, and `noContextReported=true` is that refusal arriving.
@@ -98,7 +103,8 @@ audio=played=true ms=100 state=Stopped queued=64 pending=64 limitRefused=true
 loopRefused=true badBufferRefused=true master=1.0
 song=name=canary track track=0 missingRefused=true readAfterDisposeRefused=true
 noContextReported=true librarySongs=0 libraryArtists=0 libraryPlaylists=0
-libraryPictures=47 ownSourceNil=true mediaSources=1
+libraryPictures=47 ownSourceNil=true mediaSources=1 queued=1
+playerState=Playing gameHasControl=true
 ```
 
 `waited=0` says the query completed before the first check, and `pixels=1` is

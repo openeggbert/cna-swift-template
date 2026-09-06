@@ -373,12 +373,33 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         let sources = try Microsoft.Xna.Framework.Media.MediaSource
             .GetAvailableMediaSources().Count
 
+        // The player is static and its queue is process-wide -- it outlives
+        // the game that filled it, which is CNA's own wording. Playing the
+        // canary's song puts exactly one entry in it.
+        let player = Microsoft.Xna.Framework.Media.MediaPlayer.self
+        var queued: Int32 = -1
+        var playerState = "unavailable"
+        do {
+            let track = try Microsoft.Xna.Framework.Media.Song.FromUri(
+                "queued track", uri: url)
+            try player.Play(track)
+            queued = try player.Queue.Count
+            playerState = "\(try player.State)"
+            try player.Stop()
+            try track.Dispose()
+        } catch {
+            // Left at the defaults above: a host without a media player is an
+            // answer, not a failure.
+        }
+
         SongLine = "name=\(name) track=\(track) missingRefused=\(missingRefused) "
             + "readAfterDisposeRefused=\(readAfterDisposeRefused) "
             + "noContextReported=\(noContextReported) "
             + "librarySongs=\(songs) libraryArtists=\(artists) "
             + "libraryPlaylists=\(playlists) libraryPictures=\(pictures) "
-            + "ownSourceNil=\(ownSourceNil) mediaSources=\(sources)"
+            + "ownSourceNil=\(ownSourceNil) mediaSources=\(sources) "
+            + "queued=\(queued) playerState=\(playerState) "
+            + "gameHasControl=\(player.GameHasControl)"
     }
 
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {
