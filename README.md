@@ -99,7 +99,7 @@ texture, or Swift-owned frame loop.
 One line, printed at exit, is the whole verdict:
 
 ```text
-CNA_SWIFT_CANARY requested=600 updates=601 draws=600 viewport=800x480
+CNA_SWIFT_CANARY requested=600 updates=600 draws=600 viewport=800x480
 texture=128x128 offscreen=64x64 adapters=1 name=\\.\DISPLAY1 default=true
 modes=1 reach=true window=handle=0 client=0x0 resizing=false
 device=isDisposed=false disposeRefused=true presentRefused=true
@@ -113,6 +113,28 @@ libraryPictures=47 ownSourceNil=true mediaSources=1 queued=1
 playerState=Playing gameHasControl=true
 touch=connected=false maxTouches=0 touches=0 display=800x480 gestures=1
 ```
+
+**`updates` is the one field that is not reproducible, and this file used to
+print it as though it were.** Three runs of the same binary at `--frames 600`
+answered 600, 601 and 602. `draws` is always exactly `requested`; `updates` is
+`requested` or a little more, because CNA runs a fixed time step and catches up
+with extra `Update` calls when a frame overruns, without a matching `Draw`.
+Short runs do not overrun and answer exactly: `--frames 10` gives 10 updates
+and 10 draws. Read the line for `updates >= requested`, not for a number.
+
+The canary also **exits 0**. Until Foundation 101 it did not: every run ended
+
+```text
+CNA Swift canary failed: CNA operation cna_game_destroy failed with result 3:
+All owned C child resources must be destroyed before the game.
+```
+
+printed on stderr, after the verdict line, with exit status 1 -- and this file
+documented the verdict without mentioning it. The cause was in the binding, not
+here: `ContentManager` was the only owned type whose handle was not released
+when its Swift object went away, and this canary reads `Game.Content`, installs
+its own through `SetContent`, and lets the first one go. That is an ordinary
+consumer pattern, which is what made the canary worth running.
 
 `waited=0` says the query completed before the first check, and `pixels=1` is
 what this renderer counted -- not a number to read as a scene measurement, but
