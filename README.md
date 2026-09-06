@@ -40,6 +40,14 @@ that never finished is refused. This runtime answers a count for a query that
 was never begun, so without those two refusals a consumer would read a number
 that measured nothing.
 
+It builds and plays a `SoundEffect` too, **from bytes this file writes** -- a
+tenth of a second of silence -- because XNA's PCM16 constructor takes a buffer
+and this template ships no audio asset. Nothing is audible; what it shows is
+that the sound is built, played, controlled through an instance and released,
+and that two rules XNA enforces and this runtime does not are enforced by the
+binding: the loop flag is fixed at the first `Play`, and a buffer that is not a
+whole number of PCM16 frames is refused rather than decoded as a shorter sound.
+
 Two of the values it prints are worth reading twice. The window reports a client
 area of **0x0** while the device reports a **800x480** viewport: that is what
 headless means here, and a canary that quietly used the window's size instead of
@@ -59,6 +67,8 @@ modes=1 reach=true window=handle=0 client=0x0 resizing=false
 device=isDisposed=false disposeRefused=true presentRefused=true
 content=root= cached=true installed=true kindRefused=true missingRefused=true
 query=pixels=1 waited=0 rearmRefused=true earlyCountRefused=true
+audio=played=true ms=100 state=Stopped loopRefused=true badBufferRefused=true
+master=1.0
 ```
 
 `waited=0` says the query completed before the first check, and `pixels=1` is

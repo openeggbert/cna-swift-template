@@ -36,6 +36,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
     private(set) var DisposalLine: String = "none"
     private(set) var ContentLine: String = "none"
     private(set) var QueryLine: String = "none"
+    private(set) var AudioLine: String = "none"
 
     /// `Game.GraphicsDevice` resolves the graphics device SERVICE out of
     /// `Game.Services` and returns its Optional device, which is what XNA's
@@ -82,6 +83,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         try readAdapterAndWindow(device)
         try readContent()
         try readOcclusionQuery(device)
+        try readAudio()
     }
 
     /// The surface Foundation 77 through 85 added, exercised from outside the
@@ -223,6 +225,62 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
             + "rearmRefused=\(rearmRefused) earlyCountRefused=\(countRefused)"
     }
 
+    /// `SoundEffect` and `SoundEffectInstance`, from bytes this file writes.
+    ///
+    /// **No audio asset ships with this template**, and none is needed: XNA's
+    /// PCM16 constructor takes a buffer, so a tenth of a second of silence is
+    /// the whole fixture. Nothing is audible; what is demonstrated is that the
+    /// sound is built, played, controlled and released, and that the rules XNA
+    /// enforces and this runtime does not are enforced by the binding.
+    private func readAudio() throws {
+        let silence = [UInt8](repeating: 0, count: 1600)  // 800 frames @ 8 kHz
+        let effect: Microsoft.Xna.Framework.Audio.SoundEffect
+        do {
+            effect = try Microsoft.Xna.Framework.Audio.SoundEffect(
+                buffer: silence, sampleRate: 8000, channels: .Mono)
+        } catch {
+            AudioLine = "unsupported"
+            return
+        }
+        try effect.SetName("canary silence")
+        let played = try effect.Play()
+
+        let instance = try effect.CreateInstance()
+        try instance.SetVolume(0.5)
+        try instance.SetIsLooped(true)
+        try instance.Play()
+        try instance.Stop()
+        let state = try instance.State
+
+        // The rule that closes at the first Play: the loop flag is fixed now.
+        var loopRefused = false
+        do { try instance.SetIsLooped(false) } catch { loopRefused = true }
+
+        // And the one CNA would let through: an odd-length buffer is not a
+        // whole number of PCM16 frames.
+        var badBufferRefused = false
+        do {
+            _ = try Microsoft.Xna.Framework.Audio.SoundEffect(
+                buffer: [0, 0, 0], sampleRate: 8000, channels: .Mono)
+        } catch { badBufferRefused = true }
+
+        // Read BEFORE disposal. `Duration` is infallible, so a released
+        // effect answers zero rather than refusing -- which is correct, and
+        // reads exactly like a broken duration if the call is in the wrong
+        // place. It was, in the first version of this canary.
+        //
+        // Seconds alone would also report 0 for a tenth of a second.
+        let parts = effect.Duration.components
+        let ms = Int(parts.seconds) * 1000
+            + Int(parts.attoseconds / 1_000_000_000_000_000)
+
+        try instance.Dispose()
+        try effect.Dispose()
+        AudioLine = "played=\(played) ms=\(ms) state=\(state) "
+            + "loopRefused=\(loopRefused) badBufferRefused=\(badBufferRefused) "
+            + "master=\(Microsoft.Xna.Framework.Audio.SoundEffect.MasterVolume)"
+    }
+
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {
         UpdateCallbacks += 1
         let duration = gameTime.ElapsedGameTime.components
@@ -279,6 +337,6 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
             "draws=\(DrawCallbacks) viewport=\(NativeViewport?.Width ?? 0)x\(NativeViewport?.Height ?? 0) " +
             "texture=\(dimensions) offscreen=\(OffscreenTarget) " +
             "adapters=\(AdapterLine) window=\(WindowLine) device=\(DisposalLine) "
-            + "content=\(ContentLine) query=\(QueryLine)"
+            + "content=\(ContentLine) query=\(QueryLine) audio=\(AudioLine)"
     }
 }
