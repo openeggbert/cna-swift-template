@@ -37,6 +37,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
     private(set) var ContentLine: String = "none"
     private(set) var QueryLine: String = "none"
     private(set) var AudioLine: String = "none"
+    private(set) var SongLine: String = "none"
 
     /// `Game.GraphicsDevice` resolves the graphics device SERVICE out of
     /// `Game.Services` and returns its Optional device, which is what XNA's
@@ -84,6 +85,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         try readContent()
         try readOcclusionQuery(device)
         try readAudio()
+        try readSong()
     }
 
     /// The surface Foundation 77 through 85 added, exercised from outside the
@@ -297,6 +299,62 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
             + "master=\(Microsoft.Xna.Framework.Audio.SoundEffect.MasterVolume)"
     }
 
+    /// `Song`, the one Media type a consumer can reach without a media
+    /// library.
+    ///
+    /// **The canary writes its own file and removes it.** `Song.FromUri`
+    /// requires the file to exist -- a URL naming nothing is refused -- so this
+    /// writes a minimal 8 kHz mono PCM16 WAV, opens a song through it and
+    /// deletes it again. Nothing plays: the song is a handle onto a track, and
+    /// what is shown is that it carries its name and refuses every read once
+    /// released.
+    private func readSong() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cna-swift-canary-song", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("canary.wav")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        var wav = [UInt8]()
+        func u32(_ v: Int) { for s in [0, 8, 16, 24] { wav.append(UInt8((v >> s) & 0xFF)) } }
+        func u16(_ v: Int) { for s in [0, 8] { wav.append(UInt8((v >> s) & 0xFF)) } }
+        let dataBytes = 1600
+        wav.append(contentsOf: Array("RIFF".utf8)); u32(36 + dataBytes)
+        wav.append(contentsOf: Array("WAVE".utf8))
+        wav.append(contentsOf: Array("fmt ".utf8)); u32(16)
+        u16(1); u16(1); u32(8000); u32(16000); u16(2); u16(16)
+        wav.append(contentsOf: Array("data".utf8)); u32(dataBytes)
+        wav.append(contentsOf: [UInt8](repeating: 0, count: dataBytes))
+        try Data(wav).write(to: url)
+
+        let song: Microsoft.Xna.Framework.Media.Song
+        do {
+            song = try Microsoft.Xna.Framework.Media.Song.FromUri(
+                "canary track", uri: url)
+        } catch {
+            SongLine = "unsupported"
+            return
+        }
+        let name = try song.Name ?? ""
+        let track = try song.TrackNumber
+
+        // A URL naming nothing is refused before anything else.
+        var missingRefused = false
+        do {
+            _ = try Microsoft.Xna.Framework.Media.Song.FromUri(
+                "nowhere", uri: url.deletingLastPathComponent()
+                    .appendingPathComponent("absent.wav"))
+        } catch { missingRefused = true }
+
+        try song.Dispose()
+        var readAfterDisposeRefused = false
+        do { _ = try song.Name } catch { readAfterDisposeRefused = true }
+
+        SongLine = "name=\(name) track=\(track) missingRefused=\(missingRefused) "
+            + "readAfterDisposeRefused=\(readAfterDisposeRefused)"
+    }
+
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {
         UpdateCallbacks += 1
         let duration = gameTime.ElapsedGameTime.components
@@ -353,6 +411,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
             "draws=\(DrawCallbacks) viewport=\(NativeViewport?.Width ?? 0)x\(NativeViewport?.Height ?? 0) " +
             "texture=\(dimensions) offscreen=\(OffscreenTarget) " +
             "adapters=\(AdapterLine) window=\(WindowLine) device=\(DisposalLine) "
-            + "content=\(ContentLine) query=\(QueryLine) audio=\(AudioLine)"
+            + "content=\(ContentLine) query=\(QueryLine) audio=\(AudioLine) "
+            + "song=\(SongLine)"
     }
 }

@@ -54,6 +54,12 @@ runtime accepts buffers without limit; XNA refuses past 64**, and the canary
 shows the binding enforcing that: `queued=64 pending=64 limitRefused=true`. A
 queue that grows without bound fails later and somewhere else.
 
+The last thing it opens is a `Song`, the one Media type reachable without a
+media library. **The canary writes its own file and deletes it**: `Song.FromUri`
+requires the file to exist -- a URL naming nothing is refused, and the canary
+shows that refusal too -- so it writes a minimal PCM16 WAV, opens a song through
+it and removes it again. Still no asset ships with this template.
+
 Two of the values it prints are worth reading twice. The window reports a client
 area of **0x0** while the device reports a **800x480** viewport: that is what
 headless means here, and a canary that quietly used the window's size instead of
@@ -75,6 +81,7 @@ content=root= cached=true installed=true kindRefused=true missingRefused=true
 query=pixels=1 waited=0 rearmRefused=true earlyCountRefused=true
 audio=played=true ms=100 state=Stopped queued=64 pending=64 limitRefused=true
 loopRefused=true badBufferRefused=true master=1.0
+song=name=canary track track=0 missingRefused=true readAfterDisposeRefused=true
 ```
 
 `waited=0` says the query completed before the first check, and `pixels=1` is
