@@ -12,6 +12,21 @@ from, binds it and restores the backbuffer -- a public-API demonstration that
 the inheritance is real. No pixel is claimed: the qualified renderer has no
 window.
 
+It also reads the surface the binding grew after CNA 0.21.0 landed: the adapter
+list and the device's own adapter, the window snapshot, and the two members that
+**refuse** -- `GraphicsDevice.Dispose`, because the running game owns the device
+and a borrowed handle may not destroy it, and the three-argument
+`GraphicsDevice.Present`, because this runtime's only presentation route takes
+no rectangle and no window handle. A consumer most needs to see refusals
+working, so the canary asserts them rather than avoiding them.
+
+Two of the values it prints are worth reading twice. The window reports a client
+area of **0x0** while the device reports a **800x480** viewport: that is what
+headless means here, and a canary that quietly used the window's size instead of
+the viewport's would draw nothing and say nothing. And the adapter names itself
+`\\.\DISPLAY1` with one supported display mode, which is the whole of what this
+host has to offer.
+
 There is no Content/XNB, BasicEffect, cube, capability guess, fake banner,
 synthetic texture, or Swift-owned frame loop.
 

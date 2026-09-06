@@ -31,6 +31,9 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
     private(set) var DrawCallbacks = 0
     private(set) var NativeViewport: Microsoft.Xna.Framework.Graphics.Viewport?
     private(set) var OffscreenTarget: String = "none"
+    private(set) var AdapterLine: String = "none"
+    private(set) var WindowLine: String = "none"
+    private(set) var DisposalLine: String = "none"
 
     /// `Game.GraphicsDevice` resolves the graphics device SERVICE out of
     /// `Game.Services` and returns its Optional device, which is what XNA's
@@ -73,6 +76,54 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         try device.SetRenderTarget(nil)
         OffscreenTarget = "\(asTexture.Width)x\(asTexture.Height)"
         try target.Dispose()
+
+        try readAdapterAndWindow(device)
+    }
+
+    /// The surface Foundation 77 through 85 added, exercised from outside the
+    /// package exactly as a game would.
+    ///
+    /// Everything here is a **read** or a **refusal**. Nothing opens a window,
+    /// nothing changes a display mode, and nothing claims a pixel -- the
+    /// qualified renderer has none of those.
+    private func readAdapterAndWindow(
+        _ device: Microsoft.Xna.Framework.Graphics.GraphicsDevice
+    ) throws {
+        // The adapter list is filled when the device first exists, which is
+        // this binding's stand-in for XNA's class constructor. A consumer
+        // reads it; it never asks for it.
+        let adapters = Microsoft.Xna.Framework.Graphics.GraphicsAdapter.Adapters
+        let adapter = device.Adapter
+        let modes = adapter?.SupportedDisplayModes
+        var modeCount = 0
+        if let modes {
+            let cursor = modes.GetEnumerator()
+            while (try cursor.Next()) != nil { modeCount += 1 }
+        }
+        AdapterLine = "\(adapters?.Count ?? 0) name=\(adapter?.DeviceName ?? "none") "
+            + "default=\(adapter?.IsDefaultAdapter ?? false) modes=\(modeCount) "
+            + "reach=\(adapter?.IsProfileSupported(.Reach) ?? false)"
+
+        // The window is a snapshot too, and its handle is what
+        // FindBestDevice's enumeration reads.
+        let window = Window
+        WindowLine = "handle=\(window?.Handle ?? 0) "
+            + "client=\(window?.ClientBounds.Width ?? 0)x\(window?.ClientBounds.Height ?? 0) "
+            + "resizing=\(window?.AllowUserResizing ?? false)"
+
+        // Two members that REFUSE, which is the half a consumer most needs to
+        // see working: this runtime owns the device, so a borrowed handle may
+        // not dispose it, and its only presentation route takes no rectangle.
+        var disposeRefused = false
+        do { try device.Dispose() } catch { disposeRefused = true }
+        var presentRefused = false
+        do {
+            try device.Present(
+                Microsoft.Xna.Framework.Rectangle(0, 0, 8, 8),
+                destinationRectangle: nil, overrideWindowHandle: 0)
+        } catch { presentRefused = true }
+        DisposalLine = "isDisposed=\(device.IsDisposed) "
+            + "disposeRefused=\(disposeRefused) presentRefused=\(presentRefused)"
     }
 
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {
@@ -129,6 +180,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         let dimensions = "\(logo?.Width ?? 0)x\(logo?.Height ?? 0)"
         return "CNA_SWIFT_CANARY requested=\(requestedFrames) updates=\(UpdateCallbacks) " +
             "draws=\(DrawCallbacks) viewport=\(NativeViewport?.Width ?? 0)x\(NativeViewport?.Height ?? 0) " +
-            "texture=\(dimensions) offscreen=\(OffscreenTarget)"
+            "texture=\(dimensions) offscreen=\(OffscreenTarget) " +
+            "adapters=\(AdapterLine) window=\(WindowLine) device=\(DisposalLine)"
     }
 }
