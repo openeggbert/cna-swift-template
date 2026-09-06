@@ -362,12 +362,23 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         let library = try Microsoft.Xna.Framework.Media.MediaLibrary()
         let songs = try library.Songs?.Count ?? -1
         let artists = try library.Artists?.Count ?? -1
+        let playlists = try library.Playlists?.Count ?? -1
+        let pictures = try library.Pictures?.Count ?? -1
+        // The library's own source is always nil: CNA publishes it as a name,
+        // and a name is not a MediaSource.
+        let ownSourceNil = try library.MediaSource == nil
         try library.Dispose()
+
+        // Media sources are enumerated rather than handed out as objects.
+        let sources = try Microsoft.Xna.Framework.Media.MediaSource
+            .GetAvailableMediaSources().Count
 
         SongLine = "name=\(name) track=\(track) missingRefused=\(missingRefused) "
             + "readAfterDisposeRefused=\(readAfterDisposeRefused) "
             + "noContextReported=\(noContextReported) "
-            + "librarySongs=\(songs) libraryArtists=\(artists)"
+            + "librarySongs=\(songs) libraryArtists=\(artists) "
+            + "libraryPlaylists=\(playlists) libraryPictures=\(pictures) "
+            + "ownSourceNil=\(ownSourceNil) mediaSources=\(sources)"
     }
 
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {

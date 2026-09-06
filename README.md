@@ -61,8 +61,16 @@ shows that refusal too -- so it writes a minimal PCM16 WAV, opens a song through
 it and removes it again. Still no asset ships with this template.
 
 It then opens a `MediaLibrary`, which is the door into the rest of Media, and
-reads two of its collections. This host's media store is empty, so the counts
-are zero -- what is shown is that the collections answer at all. And a song
+reads four of its collections plus the enumeration of media sources. The music
+side of this machine's store is empty and the picture side is not, which is
+exactly the point: the counts are whatever the machine holds, and what is shown
+is that every collection answers. `ownSourceNil=true` is not a failure --
+CNA publishes a library's source only as a name, and a name is not a
+`MediaSource`, so nil is the honest answer.
+
+**The canary reads; it never writes.** `MediaLibrary.SavePicture` works, and it
+is deliberately not called: it would leave a file in the user's own photo
+album, and CNA publishes no route to remove one. And a song
 built from a file has **no library context**: CNA reports that as an ordinary
 answer, the binding turns it into a refusal because the return is proven
 non-null, and `noContextReported=true` is that refusal arriving.
@@ -89,7 +97,8 @@ query=pixels=1 waited=0 rearmRefused=true earlyCountRefused=true
 audio=played=true ms=100 state=Stopped queued=64 pending=64 limitRefused=true
 loopRefused=true badBufferRefused=true master=1.0
 song=name=canary track track=0 missingRefused=true readAfterDisposeRefused=true
-noContextReported=true librarySongs=0 libraryArtists=0
+noContextReported=true librarySongs=0 libraryArtists=0 libraryPlaylists=0
+libraryPictures=47 ownSourceNil=true mediaSources=1
 ```
 
 `waited=0` says the query completed before the first check, and `pixels=1` is
