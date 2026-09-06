@@ -33,6 +33,13 @@ constructor, whose root directory is the empty string. `Content` is also not
 Optional -- read outside a Game callback it traps rather than answering nil,
 which is why the canary reads it in `LoadContent`.
 
+It runs one real `OcclusionQuery` -- begin, end, wait, read -- and then the two
+rules **the binding enforces because CNA does not**: a second `Begin` before the
+previous result has been looked at is refused, and a count read from a query
+that never finished is refused. This runtime answers a count for a query that
+was never begun, so without those two refusals a consumer would read a number
+that measured nothing.
+
 Two of the values it prints are worth reading twice. The window reports a client
 area of **0x0** while the device reports a **800x480** viewport: that is what
 headless means here, and a canary that quietly used the window's size instead of
@@ -51,7 +58,12 @@ texture=128x128 offscreen=64x64 adapters=1 name=\\.\DISPLAY1 default=true
 modes=1 reach=true window=handle=0 client=0x0 resizing=false
 device=isDisposed=false disposeRefused=true presentRefused=true
 content=root= cached=true installed=true kindRefused=true missingRefused=true
+query=pixels=1 waited=0 rearmRefused=true earlyCountRefused=true
 ```
+
+`waited=0` says the query completed before the first check, and `pixels=1` is
+what this renderer counted -- not a number to read as a scene measurement, but
+proof the round trip reaches the GPU path and comes back.
 
 ## Qualified boundary
 

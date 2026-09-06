@@ -35,6 +35,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
     private(set) var WindowLine: String = "none"
     private(set) var DisposalLine: String = "none"
     private(set) var ContentLine: String = "none"
+    private(set) var QueryLine: String = "none"
 
     /// `Game.GraphicsDevice` resolves the graphics device SERVICE out of
     /// `Game.Services` and returns its Optional device, which is what XNA's
@@ -80,6 +81,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
 
         try readAdapterAndWindow(device)
         try readContent()
+        try readOcclusionQuery(device)
     }
 
     /// The surface Foundation 77 through 85 added, exercised from outside the
@@ -175,6 +177,52 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
             + "missingRefused=\(missingRefused)"
     }
 
+    /// `OcclusionQuery`, and the two rules the binding enforces because CNA
+    /// does not.
+    ///
+    /// A real round trip -- begin, end, wait, read -- then the two refusals: a
+    /// second `Begin` before the result has been looked at, and a count read
+    /// from a query that never finished. Both are XNA behaviour that this
+    /// runtime would otherwise let through, so a consumer sees them working.
+    private func readOcclusionQuery(
+        _ device: Microsoft.Xna.Framework.Graphics.GraphicsDevice
+    ) throws {
+        let query: Microsoft.Xna.Framework.Graphics.OcclusionQuery
+        do {
+            query = try Microsoft.Xna.Framework.Graphics.OcclusionQuery(
+                graphicsDevice: device)
+        } catch {
+            // A backend with no query object refuses at construction, which is
+            // the honest outcome and is printed rather than hidden.
+            QueryLine = "unsupported"
+            return
+        }
+
+        try query.Begin()
+        try query.End()
+        var spins = 0
+        while !query.IsComplete && spins < 10_000 { spins += 1 }
+        let count = try query.PixelCount
+
+        // Rearm rule: End without checking IsComplete, then Begin again.
+        try query.Begin()
+        try query.End()
+        var rearmRefused = false
+        do { try query.Begin() } catch { rearmRefused = true }
+        _ = query.IsComplete
+
+        // A fresh query has nothing to report, and says so.
+        let unfinished = try Microsoft.Xna.Framework.Graphics.OcclusionQuery(
+            graphicsDevice: device)
+        var countRefused = false
+        do { _ = try unfinished.PixelCount } catch { countRefused = true }
+        try unfinished.Dispose()
+        try query.Dispose()
+
+        QueryLine = "pixels=\(count) waited=\(spins) "
+            + "rearmRefused=\(rearmRefused) earlyCountRefused=\(countRefused)"
+    }
+
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {
         UpdateCallbacks += 1
         let duration = gameTime.ElapsedGameTime.components
@@ -231,6 +279,6 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
             "draws=\(DrawCallbacks) viewport=\(NativeViewport?.Width ?? 0)x\(NativeViewport?.Height ?? 0) " +
             "texture=\(dimensions) offscreen=\(OffscreenTarget) " +
             "adapters=\(AdapterLine) window=\(WindowLine) device=\(DisposalLine) "
-            + "content=\(ContentLine)"
+            + "content=\(ContentLine) query=\(QueryLine)"
     }
 }
