@@ -20,6 +20,19 @@ and a borrowed handle may not destroy it, and the three-argument
 no rectangle and no window handle. A consumer most needs to see refusals
 working, so the canary asserts them rather than avoiding them.
 
+It reads `Game.Content` too, and the three facts a consumer meets first: the
+game's manager is **cached** rather than rebuilt per read, a caller can install
+their own through `SetContent`, and the two ways a load fails are told apart --
+`kindRefused` is an asset kind this runtime has no route for, `missingRefused`
+is an asset that is simply not there. **No asset is loaded**, because this
+template ships no `.xnb` and a canary that needed one would be testing the
+fixture instead of the binding.
+
+The manager's root reads back **empty**: `Game.Content` uses XNA's one-argument
+constructor, whose root directory is the empty string. `Content` is also not
+Optional -- read outside a Game callback it traps rather than answering nil,
+which is why the canary reads it in `LoadContent`.
+
 Two of the values it prints are worth reading twice. The window reports a client
 area of **0x0** while the device reports a **800x480** viewport: that is what
 headless means here, and a canary that quietly used the window's size instead of
@@ -27,8 +40,18 @@ the viewport's would draw nothing and say nothing. And the adapter names itself
 `\\.\DISPLAY1` with one supported display mode, which is the whole of what this
 host has to offer.
 
-There is no Content/XNB, BasicEffect, cube, capability guess, fake banner,
-synthetic texture, or Swift-owned frame loop.
+There is no XNB, BasicEffect, cube, capability guess, fake banner, synthetic
+texture, or Swift-owned frame loop.
+
+One line, printed at exit, is the whole verdict:
+
+```text
+CNA_SWIFT_CANARY requested=600 updates=601 draws=600 viewport=800x480
+texture=128x128 offscreen=64x64 adapters=1 name=\\.\DISPLAY1 default=true
+modes=1 reach=true window=handle=0 client=0x0 resizing=false
+device=isDisposed=false disposeRefused=true presentRefused=true
+content=root= cached=true installed=true kindRefused=true missingRefused=true
+```
 
 ## Qualified boundary
 

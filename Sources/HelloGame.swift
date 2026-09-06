@@ -34,6 +34,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
     private(set) var AdapterLine: String = "none"
     private(set) var WindowLine: String = "none"
     private(set) var DisposalLine: String = "none"
+    private(set) var ContentLine: String = "none"
 
     /// `Game.GraphicsDevice` resolves the graphics device SERVICE out of
     /// `Game.Services` and returns its Optional device, which is what XNA's
@@ -78,6 +79,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         try target.Dispose()
 
         try readAdapterAndWindow(device)
+        try readContent()
     }
 
     /// The surface Foundation 77 through 85 added, exercised from outside the
@@ -124,6 +126,53 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         } catch { presentRefused = true }
         DisposalLine = "isDisposed=\(device.IsDisposed) "
             + "disposeRefused=\(disposeRefused) presentRefused=\(presentRefused)"
+    }
+
+    /// `Game.Content`, and the two refusals a consumer meets first.
+    ///
+    /// Nothing here loads an asset: this template ships no `.xnb`, and a
+    /// canary that needed one would be testing the fixture. What it proves is
+    /// that the manager exists inside the lifecycle, that the game's one is
+    /// cached rather than rebuilt, that a caller can install their own, and
+    /// that the two ways a load can fail are **distinguishable** -- a kind
+    /// with no route is refused by name, a missing asset fails through the
+    /// route it does have.
+    private func readContent() throws {
+        // Non-Optional: the getter has no failure path and its return is
+        // proven non-null, so there is nothing to unwrap. Outside a callback
+        // it would trap, which is why this is read here and not in init.
+        let content = Content
+        let cached = Content === content
+
+        // A consumer's own manager, installed through the writer. This is the
+        // half that needs System.IServiceProvider to be a protocol: Services
+        // is a GameServiceContainer, but the constructor takes the interface.
+        let mine = try Microsoft.Xna.Framework.Content.ContentManager(
+            serviceProvider: Services, rootDirectory: "Content")
+        try SetContent(mine)
+        let installed = Content === mine
+
+        var kindRefused = false
+        do {
+            let _: Microsoft.Xna.Framework.Graphics.SpriteFont =
+                try mine.Load("any")
+        } catch { kindRefused = true }
+
+        var missingRefused = false
+        do {
+            let _: Microsoft.Xna.Framework.Graphics.Texture2D =
+                try mine.Load("no-such-asset")
+        } catch { missingRefused = true }
+
+        // Unload leaves it usable; Dispose is what ends it. The manager is
+        // registered with the runtime either way, so a consumer who forgets
+        // this line does not leak a handle past the game.
+        try mine.Unload()
+        try mine.Dispose()
+
+        ContentLine = "root=\(content.RootDirectory ?? "nil") cached=\(cached) "
+            + "installed=\(installed) kindRefused=\(kindRefused) "
+            + "missingRefused=\(missingRefused)"
     }
 
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {
@@ -181,6 +230,7 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
         return "CNA_SWIFT_CANARY requested=\(requestedFrames) updates=\(UpdateCallbacks) " +
             "draws=\(DrawCallbacks) viewport=\(NativeViewport?.Width ?? 0)x\(NativeViewport?.Height ?? 0) " +
             "texture=\(dimensions) offscreen=\(OffscreenTarget) " +
-            "adapters=\(AdapterLine) window=\(WindowLine) device=\(DisposalLine)"
+            "adapters=\(AdapterLine) window=\(WindowLine) device=\(DisposalLine) "
+            + "content=\(ContentLine)"
     }
 }
