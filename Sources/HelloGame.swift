@@ -347,12 +347,27 @@ final class HelloGame: Microsoft.Xna.Framework.Game {
                     .appendingPathComponent("absent.wav"))
         } catch { missingRefused = true }
 
+        // A song built from a file has no media-library context, and CNA says
+        // so rather than failing -- the binding reports it because the return
+        // is proven non-null and there is nothing to hand back.
+        var noContextReported = false
+        do { _ = try song.Artist } catch { noContextReported = true }
+
         try song.Dispose()
         var readAfterDisposeRefused = false
         do { _ = try song.Name } catch { readAfterDisposeRefused = true }
 
+        // The library is the door into the rest of Media. This host's media
+        // store is empty; what is shown is that the collections answer.
+        let library = try Microsoft.Xna.Framework.Media.MediaLibrary()
+        let songs = try library.Songs?.Count ?? -1
+        let artists = try library.Artists?.Count ?? -1
+        try library.Dispose()
+
         SongLine = "name=\(name) track=\(track) missingRefused=\(missingRefused) "
-            + "readAfterDisposeRefused=\(readAfterDisposeRefused)"
+            + "readAfterDisposeRefused=\(readAfterDisposeRefused) "
+            + "noContextReported=\(noContextReported) "
+            + "librarySongs=\(songs) libraryArtists=\(artists)"
     }
 
     override func Update(_ gameTime: Microsoft.Xna.Framework.GameTime) throws {

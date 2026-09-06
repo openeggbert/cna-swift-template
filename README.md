@@ -60,6 +60,13 @@ requires the file to exist -- a URL naming nothing is refused, and the canary
 shows that refusal too -- so it writes a minimal PCM16 WAV, opens a song through
 it and removes it again. Still no asset ships with this template.
 
+It then opens a `MediaLibrary`, which is the door into the rest of Media, and
+reads two of its collections. This host's media store is empty, so the counts
+are zero -- what is shown is that the collections answer at all. And a song
+built from a file has **no library context**: CNA reports that as an ordinary
+answer, the binding turns it into a refusal because the return is proven
+non-null, and `noContextReported=true` is that refusal arriving.
+
 Two of the values it prints are worth reading twice. The window reports a client
 area of **0x0** while the device reports a **800x480** viewport: that is what
 headless means here, and a canary that quietly used the window's size instead of
@@ -82,6 +89,7 @@ query=pixels=1 waited=0 rearmRefused=true earlyCountRefused=true
 audio=played=true ms=100 state=Stopped queued=64 pending=64 limitRefused=true
 loopRefused=true badBufferRefused=true master=1.0
 song=name=canary track track=0 missingRefused=true readAfterDisposeRefused=true
+noContextReported=true librarySongs=0 libraryArtists=0
 ```
 
 `waited=0` says the query completed before the first check, and `pixels=1` is
